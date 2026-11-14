@@ -17,6 +17,23 @@ import type {
   ImportPreviewResponse,
   UploadDocumentResponse,
 } from "./types/ingestion";
+import type {
+  ChargeCreate,
+  ChargeResponse,
+  CustomerCreate,
+  CustomerCreateResponse,
+  CustomerLedgerResponse,
+  CustomerResponse,
+  CustomerStatementResult,
+  CustomerUpdate,
+  ReminderDraftResponse,
+  RepaymentCreate,
+  RepaymentResponse,
+  ReversalCreate,
+  ReversalResponse,
+  UdharSummaryResult,
+} from "./types/udhar";
+import type { SavedScenario, ScenarioInput } from "./types/simulation";
 
 export interface HealthResponse {
   status: string;
@@ -460,6 +477,303 @@ export async function getAnalyticsTrends(
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
     throw new Error(err?.error?.message || `Failed to fetch trends (${res.status})`);
+  }
+
+  return res.json();
+}
+
+// -------------------------------------------------------------------------
+// Phase 5: Udhar (Customer Credit) Management APIs
+// -------------------------------------------------------------------------
+
+/**
+ * Fetch store-wide udhar receivables, overdue balances, and aging distribution.
+ */
+export async function getUdharSummary(asOfDate?: string): Promise<UdharSummaryResult> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/udhar/summary`);
+  if (asOfDate) url.searchParams.append("as_of_date", asOfDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch Udhar summary (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function runSimulation(payload: ScenarioInput): Promise<{ data: SavedScenario["result"]; evidence: SavedScenario["evidence"] }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/simulation/scenarios`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Simulation failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function listScenarios(): Promise<SavedScenario[]> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/simulation/scenarios`, { headers, cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to load scenarios (${res.status})`);
+  return res.json();
+}
+
+/**
+ * List customers with derived balances, overdue amounts, and aging status.
+ */
+export async function listCustomers(
+  query?: string,
+  includeArchived: boolean = false
+): Promise<CustomerResponse[]> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/udhar/customers`);
+  if (query) url.searchParams.append("query", query);
+  if (includeArchived) url.searchParams.append("include_archived", "true");
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to list customers (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Create a new customer with optional opening balance, limit, and duplicate warnings.
+ */
+export async function createCustomer(payload: CustomerCreate): Promise<CustomerCreateResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to create customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch customer profile by id.
+ */
+export async function getCustomer(customerId: string): Promise<CustomerResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Update customer details and credit limit.
+ */
+export async function updateCustomer(
+  customerId: string,
+  payload: CustomerUpdate
+): Promise<CustomerResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}`, {
+    method: "PUT",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to update customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Archive customer (soft-delete).
+ */
+export async function archiveCustomer(customerId: string): Promise<CustomerResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}/archive`, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to archive customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Unarchive / restore customer.
+ */
+export async function unarchiveCustomer(customerId: string): Promise<CustomerResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}/unarchive`, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to restore customer (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch chronological customer ledger with line-by-line running balance.
+ */
+export async function getCustomerLedger(customerId: string): Promise<CustomerLedgerResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}/ledger`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch customer ledger (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Generate reconciled customer statement with opening, charges, repayments, and closing balances.
+ */
+export async function getCustomerStatement(
+  customerId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<CustomerStatementResult> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}/statement`);
+  if (startDate) url.searchParams.append("start_date", startDate);
+  if (endDate) url.searchParams.append("end_date", endDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to generate statement (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Generate un-sent polite reminder draft preview (Hinglish, Hindi, English) with WhatsApp link.
+ */
+export async function generateReminderDraft(
+  customerId: string,
+  language: "Hinglish" | "Hindi" | "English" = "Hinglish"
+): Promise<ReminderDraftResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/customers/${customerId}/reminder-draft`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to generate reminder draft (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Record a credit sale (charge) entry.
+ */
+export async function recordCharge(payload: ChargeCreate): Promise<ChargeResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/charges`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to record credit charge (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Record a customer repayment collection.
+ */
+export async function recordRepayment(payload: RepaymentCreate): Promise<RepaymentResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/repayments`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to record repayment (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Post a compensating reversal for a transaction.
+ */
+export async function reverseTransaction(
+  transactionId: string,
+  payload: ReversalCreate
+): Promise<ReversalResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_BASE_URL}/api/v1/udhar/transactions/${transactionId}/reverse`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to reverse transaction (${res.status})`);
   }
 
   return res.json();

@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ArrowRight,
   BarChart3,
+  BookOpen,
   CheckCircle2,
   Database,
   FileSpreadsheet,
@@ -19,6 +20,7 @@ import {
 
 import { AnalyticsDashboard } from "@/features/analytics/AnalyticsDashboard";
 import { DataCentreView } from "@/features/data-centre/DataCentreView";
+import { UdharDashboard } from "@/features/udhar/UdharDashboard";
 import {
   API_BASE_URL,
   checkBackendHealth,
@@ -28,7 +30,7 @@ import {
 export default function Home() {
   const [result, setResult] = useState<ConnectivityResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [mainTab, setMainTab] = useState<"analytics" | "datacentre" | "system">("analytics");
+  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "datacentre" | "system">("analytics");
 
   const runCheck = async () => {
     setLoading(true);
@@ -64,8 +66,8 @@ export default function Home() {
                 <h1 className="text-xl font-bold tracking-tight text-slate-900">
                   DukaanAI
                 </h1>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-                  Phase 4 Verified
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  Phase 5 Verified
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
@@ -75,10 +77,10 @@ export default function Home() {
           </div>
 
           {/* Navigation Pill Switches */}
-          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold self-start sm:self-auto">
+          <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold self-start sm:self-auto overflow-x-auto max-w-full">
             <button
               onClick={() => setMainTab("analytics")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
                 mainTab === "analytics"
                   ? "bg-white text-slate-900 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -88,14 +90,25 @@ export default function Home() {
               <span>Core Analytics</span>
             </button>
             <button
+              onClick={() => setMainTab("udhar")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
+                mainTab === "udhar"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Udhar (Khata)</span>
+            </button>
+            <button
               onClick={() => setMainTab("datacentre")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
                 mainTab === "datacentre"
                   ? "bg-white text-slate-900 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
               <span>Data Centre</span>
             </button>
             <button
@@ -135,6 +148,8 @@ export default function Home() {
         {/* View Switching */}
         {mainTab === "analytics" ? (
           <AnalyticsDashboard />
+        ) : mainTab === "udhar" ? (
+          <UdharDashboard />
         ) : mainTab === "datacentre" ? (
           <DataCentreView />
         ) : (

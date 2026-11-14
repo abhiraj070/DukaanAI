@@ -2,7 +2,9 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import analytics, auth, documents, health, ingestion
+from app.api.v1.endpoints import (
+    analytics, auth, documents, health, ingestion, inventory, simulation, udhar,
+)
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -12,3 +14,6 @@ api_v1_router.include_router(auth.router)
 api_v1_router.include_router(documents.router)
 api_v1_router.include_router(ingestion.router)
 api_v1_router.include_router(analytics.router)
+api_v1_router.include_router(inventory.router)
+api_v1_router.include_router(simulation.router)
+api_v1_router.include_router(udhar.router)

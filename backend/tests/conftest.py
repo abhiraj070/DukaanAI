@@ -63,6 +63,14 @@ def tenants(db_session: Session) -> dict[str, dict]:
 
 
 @pytest.fixture
+def client(db_session: Session):
+    """Create a synchronous TestClient for the FastAPI app."""
+    from fastapi.testclient import TestClient
+
+    return TestClient(app)
+
+
+@pytest.fixture
 async def async_client(db_session: Session):
     """Create an asynchronous HTTP test client for the FastAPI app."""
     transport = ASGITransport(app=app)

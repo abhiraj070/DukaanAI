@@ -29,6 +29,7 @@ class TransactionType(StrEnum):
     """Udhar ledger transaction types defining financial direction."""
 
     CHARGE = "CHARGE"  # Increases receivable balance (+)
+    OPENING_BALANCE = "OPENING_BALANCE"  # Owner-confirmed opening balance increasing receivable (+)
     REPAYMENT = "REPAYMENT"  # Reduces receivable balance via collection (-)
     ADJUSTMENT_DEBIT = "ADJUSTMENT_DEBIT"  # Authorized correction increasing receivable (+)
     ADJUSTMENT_CREDIT = "ADJUSTMENT_CREDIT"  # Authorized correction decreasing receivable (-)
