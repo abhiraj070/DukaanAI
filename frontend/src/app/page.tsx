@@ -5,6 +5,7 @@ import {
   Activity,
   AlertCircle,
   ArrowRight,
+  BarChart3,
   CheckCircle2,
   Database,
   FileSpreadsheet,
@@ -16,6 +17,7 @@ import {
   Terminal,
 } from "lucide-react";
 
+import { AnalyticsDashboard } from "@/features/analytics/AnalyticsDashboard";
 import { DataCentreView } from "@/features/data-centre/DataCentreView";
 import {
   API_BASE_URL,
@@ -26,7 +28,7 @@ import {
 export default function Home() {
   const [result, setResult] = useState<ConnectivityResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [mainTab, setMainTab] = useState<"datacentre" | "system">("datacentre");
+  const [mainTab, setMainTab] = useState<"analytics" | "datacentre" | "system">("analytics");
 
   const runCheck = async () => {
     setLoading(true);
@@ -62,8 +64,8 @@ export default function Home() {
                 <h1 className="text-xl font-bold tracking-tight text-slate-900">
                   DukaanAI
                 </h1>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
-                  Phase 3 Verified
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                  Phase 4 Verified
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
@@ -75,6 +77,17 @@ export default function Home() {
           {/* Navigation Pill Switches */}
           <div className="flex items-center gap-1.5 p-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold self-start sm:self-auto">
             <button
+              onClick={() => setMainTab("analytics")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
+                mainTab === "analytics"
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
+              <span>Core Analytics</span>
+            </button>
+            <button
               onClick={() => setMainTab("datacentre")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
                 mainTab === "datacentre"
@@ -83,7 +96,7 @@ export default function Home() {
               }`}
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Data Centre & Ingestion</span>
+              <span>Data Centre</span>
             </button>
             <button
               onClick={() => setMainTab("system")}
@@ -93,8 +106,8 @@ export default function Home() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <Activity className="w-3.5 h-3.5 text-blue-600" />
-              <span>System & Diagnostics</span>
+              <Activity className="w-3.5 h-3.5 text-emerald-600" />
+              <span>System</span>
             </button>
           </div>
         </div>
@@ -113,14 +126,16 @@ export default function Home() {
               From business data to better business decisions.
             </h2>
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              DukaanAI empowers Indian kiranas with multimodal ingestion (CSV, Excel, PDF, Hindi/Hinglish notes),
-              predictive inventory intelligence, what-if simulations, and an auditable Udhar credit ledger.
+              DukaanAI empowers Indian kiranas with authoritative historical analytics, multimodal data ingestion,
+              predictive inventory intelligence, and an auditable Udhar credit ledger.
             </p>
           </div>
         </div>
 
         {/* View Switching */}
-        {mainTab === "datacentre" ? (
+        {mainTab === "analytics" ? (
+          <AnalyticsDashboard />
+        ) : mainTab === "datacentre" ? (
           <DataCentreView />
         ) : (
           <div className="space-y-8">
@@ -270,10 +285,10 @@ export default function Home() {
         {/* Phase Progress Footer */}
         <div className="p-4 rounded-xl bg-slate-100 border border-slate-200 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-600 gap-3">
           <span>
-            Phase 0, Phase 1, Phase 2, & Phase 3 Complete • Ingestion & Data Centre Fully Verified
+            Phase 4 (Core Business Analytics) Complete & Verified • Next: Phase 5 (Udhar Management)
           </span>
           <div className="flex items-center gap-1 font-semibold text-slate-800">
-            <span>Next: Phase 4 (Core Business Analytics)</span>
+            <span>Next: Phase 5 (Udhar Management)</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </div>
         </div>

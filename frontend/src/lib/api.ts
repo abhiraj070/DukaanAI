@@ -3,6 +3,13 @@
  */
 
 import type {
+  AnalyticsTrendsResponse,
+  CategoryBreakdownResponse,
+  DomainResult,
+  KPIOverview,
+  ProductRankingResponse,
+} from "./types/analytics";
+import type {
   DocumentConfirmResponse,
   DocumentExtractionData,
   DocumentExtractionResponse,
@@ -181,7 +188,6 @@ export async function uploadDocument(
   autoProcess: boolean = true
 ): Promise<UploadDocumentResponse> {
   const headers = await authHeaders();
-  // Delete Content-Type so browser sets boundary for multipart/form-data
   delete (headers as Record<string, string>)["Content-Type"];
 
   const formData = new FormData();
@@ -338,6 +344,122 @@ export async function previewImportFile(file: File): Promise<ImportPreviewRespon
   if (!res.ok) {
     const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
     throw new Error(err?.error?.message || `Preview failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4 Core Business Analytics API Client Functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch authoritative business KPIs and evidence metadata.
+ */
+export async function getKPIs(
+  period: string = "LAST_30_DAYS",
+  startDate?: string,
+  endDate?: string
+): Promise<DomainResult<KPIOverview>> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/analytics/kpis`);
+  url.searchParams.append("period", period);
+  if (startDate) url.searchParams.append("start_date", startDate);
+  if (endDate) url.searchParams.append("end_date", endDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch KPIs (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch top and slow-moving product rankings.
+ */
+export async function getProductRankings(
+  period: string = "LAST_30_DAYS",
+  startDate?: string,
+  endDate?: string
+): Promise<DomainResult<ProductRankingResponse>> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/analytics/products`);
+  url.searchParams.append("period", period);
+  if (startDate) url.searchParams.append("start_date", startDate);
+  if (endDate) url.searchParams.append("end_date", endDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch product rankings (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch category performance breakdown.
+ */
+export async function getCategoryBreakdown(
+  period: string = "LAST_30_DAYS",
+  startDate?: string,
+  endDate?: string
+): Promise<DomainResult<CategoryBreakdownResponse>> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/analytics/categories`);
+  url.searchParams.append("period", period);
+  if (startDate) url.searchParams.append("start_date", startDate);
+  if (endDate) url.searchParams.append("end_date", endDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch categories (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch daily revenue, COGS, and expense trends for timeline charts.
+ */
+export async function getAnalyticsTrends(
+  period: string = "LAST_30_DAYS",
+  startDate?: string,
+  endDate?: string
+): Promise<DomainResult<AnalyticsTrendsResponse>> {
+  const headers = await authHeaders();
+  const url = new URL(`${API_BASE_URL}/api/v1/analytics/trends`);
+  url.searchParams.append("period", period);
+  if (startDate) url.searchParams.append("start_date", startDate);
+  if (endDate) url.searchParams.append("end_date", endDate);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as APIErrorResponse | null;
+    throw new Error(err?.error?.message || `Failed to fetch trends (${res.status})`);
   }
 
   return res.json();
