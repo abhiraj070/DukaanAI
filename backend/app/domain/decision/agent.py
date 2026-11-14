@@ -7,8 +7,8 @@ from pydantic_ai import Agent, RunContext
 from sqlalchemy.orm import Session
 
 from app.core.context import BusinessContext
-from app.domain.knowledge.service import retrieve
 from app.domain.analytics.service import AnalyticsService
+from app.domain.knowledge.service import retrieve
 from app.schemas.analytics import AnalyticsFilter
 from app.schemas.decision import DecisionResponse
 
