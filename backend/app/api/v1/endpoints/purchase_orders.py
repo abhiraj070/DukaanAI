@@ -40,6 +40,16 @@ def approve_purchase_order(
     return PurchaseOrderService(db, context).transition(po_id, "approve")
 
 
+@router.put("/{po_id}", response_model=PurchaseOrderResponse)
+def update_purchase_order(
+    po_id: str,
+    payload: PurchaseOrderCreate,
+    context: BusinessContext = Depends(get_business_context),
+    db: Session = Depends(get_db),
+):
+    return PurchaseOrderService(db, context).update_draft(po_id, payload)
+
+
 @router.post("/{po_id}/cancel", response_model=PurchaseOrderResponse)
 def cancel_purchase_order(
     po_id: str,

@@ -135,6 +135,43 @@ class PurchaseOrderService:
         self.db.flush()
         return self._response(po)
 
+    def update_draft(self, po_id: str, payload: PurchaseOrderCreate) -> PurchaseOrderResponse:
+        po = self._get(po_id)
+        if po.status != "DRAFT":
+            raise ConflictError("Only draft purchase orders can be edited")
+        if (
+            payload.supplier_id
+            and not self.db.query(Supplier.id)
+            .filter_by(id=payload.supplier_id, business_id=self.context.business_id)
+            .first()
+        ):
+            raise NotFoundError("Supplier not found")
+        items = []
+        for line in payload.items:
+            product = (
+                self.db.query(Product)
+                .filter_by(id=line.product_id, business_id=self.context.business_id, is_active=True)
+                .first()
+            )
+            if not product:
+                raise NotFoundError(f"Product {line.product_id} not found")
+            items.append(
+                PurchaseOrderItem(
+                    business_id=self.context.business_id,
+                    product_id=product.id,
+                    product_name=product.name,
+                    quantity=line.quantity,
+                    unit_cost=line.unit_cost,
+                    unit_cost_source=line.unit_cost_source,
+                )
+            )
+        po.supplier_id, po.notes = payload.supplier_id, payload.notes
+        po.items = items
+        po.updated_at = datetime.now(UTC)
+        self._audit("UPDATE", po, {"items": len(items)})
+        self.db.flush()
+        return self._response(po)
+
     def receive(self, po_id: str, payload: PurchaseOrderReceipt) -> PurchaseOrderResponse:
         po = self._get(po_id)
         if po.status not in {"APPROVED", "PARTIALLY_RECEIVED"}:
