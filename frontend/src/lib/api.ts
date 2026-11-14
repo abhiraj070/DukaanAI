@@ -73,6 +73,33 @@ export interface AuthSession {
   businessName: string;
 }
 
+export interface PurchaseOrderItem {
+  id: string; product_id: string; product_name: string; quantity: string;
+  unit_cost: string; unit_cost_source: string; received_quantity: string;
+}
+export interface PurchaseOrder {
+  id: string; supplier_id: string | null; status: string; notes: string | null;
+  total_amount: string; items: PurchaseOrderItem[]; created_at: string;
+  approved_at: string | null; received_at: string | null; cancelled_at: string | null;
+}
+
+async function poRequest<T>(path: string, body?: unknown): Promise<T> {
+  const headers = await authHeaders() as Record<string, string>;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const response = await fetch(`${API_BASE_URL}/api/v1/purchase-orders${path}`, {
+    method: body === undefined ? "GET" : "POST", headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.error?.message ?? `Purchase order request failed (${response.status})`);
+  }
+  return response.json();
+}
+export const listPurchaseOrders = () => poRequest<PurchaseOrder[]>("");
+export const approvePurchaseOrder = (id: string) => poRequest<PurchaseOrder>(`/${id}/approve`, {});
+export const cancelPurchaseOrder = (id: string) => poRequest<PurchaseOrder>(`/${id}/cancel`, {});
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 

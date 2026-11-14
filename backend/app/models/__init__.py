@@ -7,7 +7,9 @@ from app.models.document import DocumentExtraction, UploadedDocument
 from app.models.festival import FestivalCalendarEvent
 from app.models.identity import Business, BusinessMembership, User
 from app.models.inventory import ForecastRun, InventoryMovement, MovementType
+from app.models.knowledge import Conversation, KnowledgeChunk
 from app.models.operations import Expense, Sale, SaleItem
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.models.simulation import ScenarioRun
 from app.models.udhar import (
     CreditAccount,
@@ -32,6 +34,8 @@ __all__ = [
     "Sale",
     "SaleItem",
     "Expense",
+    "PurchaseOrder",
+    "PurchaseOrderItem",
     "ScenarioRun",
     "Customer",
     "CreditAccount",
@@ -41,5 +45,7 @@ __all__ = [
     "AuditLog",
     "UploadedDocument",
     "DocumentExtraction",
+    "KnowledgeChunk",
+    "Conversation",
     "FestivalCalendarEvent",
 ]

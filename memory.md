@@ -561,3 +561,26 @@ et_revenue - COGS), Gross Margin %, Total Units Sold.
   - Full backend pytest run stalls during the analytics API tests; focused phase tests pass. Needs diagnosis.
   - `pnpm --dir frontend build`: Turbopack failed while starting its CSS worker; `pnpm --dir frontend exec next build --webpack` then failed fetching Geist fonts because `fonts.googleapis.com` is unavailable in this environment.
 - Next: Add explicit incoming-PO source and complete delay/purchase scenario semantics; diagnose full-suite stall and complete Phase 6/7 delivery gates.
+
+### Session 7 — Phases 8 and 9 started
+
+- Date: 2026-11-14
+- Status: Phase 8 procurement optimization and Phase 9 festival intelligence slices implemented; delivery gates remain open.
+- Phase 8:
+  - Procurement need deducts movement-reconciled on-hand stock and forecast-period demand; expected sell-through/revenue is capped to forecast units net of stock.
+  - Supplier MOQ and pack size are only presented/applied when explicitly configured.
+  - Budget-limited candidates are returned as alternatives with a reason; missing costs, no recent demand, missing constraints and absent incoming-PO data are surfaced.
+  - Receivables cannot be included as procurement cash. Added authenticated optimization API and budget comparison UI.
+- Phase 9:
+  - Added tenant-scoped editable festival occurrences with optional category mapping and regional dates.
+  - Historical uplift compares prior matching occurrences to preceding 28-day baselines and requires at least two comparable windows; otherwise outputs a labelled user assumption or insufficient-history result.
+  - Festival evidence can be applied to forecast and simulation requests, with calendar and sale provenance carried into evidence.
+- Verification before the shared checkout advanced to Phase 11:
+  - Phase 8/9 domain tests passed (including hand-checked historical uplift and optimizer alternatives); combined domain/migration run reported 15 passing.
+  - Scoped Ruff checks passed; frontend lint for Phase 8/9 UI passed earlier.
+- Current shared-checkout caveats:
+  - New uncommitted Phase 11 routes require `pydantic_ai`, which is not installed; pytest collection now fails before tests execute.
+  - New uncommitted purchase-order UI has an ESLint set-state-in-effect error, so repo-wide lint currently fails outside Phase 8/9 files.
+  - Full frontend build remains blocked by Turbopack worker startup and the webpack fallback's unavailable Google Fonts network fetch.
+  - Purchase-order files are present but uncommitted and are not yet integrated into forecast/optimization incoming-stock calculations.
+- Next: Resolve shared Phase 11 dependency/test collection and finish incoming purchase-order integration, then complete Phase 8/9 API/UI acceptance gates.

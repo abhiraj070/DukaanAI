@@ -182,3 +182,13 @@ Each implementation phase must strictly pass acceptance criteria before proceedi
 - **Phases 3–13:** Ingestion, Analytics, Udhar Ledger, Forecasting, Simulation, Optimization, Festivals, RAG, PydanticAI Copilot, Workflows, Hardening.
 
 Refer to `phases.md` for complete delivery gate definitions.
+
+## Production release checklist
+
+- Set `APP_ENV=production`, a unique `APP_SECRET_KEY` with at least 32 characters, explicit `ALLOWED_ORIGINS`, and production `DATABASE_URL` through the hosting secret manager. Never use `.env.example` values in production.
+- Deploy backend migrations with `alembic upgrade head` before serving traffic. Configure managed PostgreSQL backups, point-in-time recovery where available, and rehearse restores to a separate database.
+- Deploy the frontend with `NEXT_PUBLIC_API_URL` set to the HTTPS API origin. Verify health, authenticated tenant-scoped reads, upload size rejection, and seeded demo flows in staging.
+- `/api/v1/auth/demo-token` is disabled outside development/test. Production still needs deployment-specific secret management, HTTPS, monitoring, edge rate limiting, and an operational retention policy.
+- Purchase orders remain auditable drafts until approved. Approval does not change stock; receipt posts inventory movements. External ordering, payments, and message sending are not implemented.
+- Demo fixtures live under `backend/tests/fixtures`; keep demo and production databases separate and never run fixture/reset operations on production.
+- Before release, run `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build` from `frontend/`.

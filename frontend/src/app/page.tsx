@@ -24,6 +24,7 @@ import { UdharDashboard } from "@/features/udhar/UdharDashboard";
 import { SimulationDashboard } from "@/features/simulation/SimulationDashboard";
 import { FestivalDashboard } from "@/features/festivals/FestivalDashboard";
 import { OptimizationDashboard } from "@/features/optimization/OptimizationDashboard";
+import PurchaseOrdersDashboard from "@/features/purchase-orders/PurchaseOrdersDashboard";
 import {
   API_BASE_URL,
   checkBackendHealth,
@@ -33,7 +34,7 @@ import {
 export default function Home() {
   const [result, setResult] = useState<ConnectivityResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "simulation" | "festivals" | "optimization" | "datacentre" | "system">("analytics");
+  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "simulation" | "festivals" | "optimization" | "datacentre" | "purchaseorders" | "system">("analytics");
 
   const runCheck = async () => {
     setLoading(true);
@@ -133,6 +134,12 @@ export default function Home() {
               <span>Data Centre</span>
             </button>
             <button
+              onClick={() => setMainTab("purchaseorders")}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md whitespace-nowrap ${mainTab === "purchaseorders" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <Store className="w-3.5 h-3.5 text-amber-600" /><span>Purchase Orders</span>
+            </button>
+            <button
               onClick={() => setMainTab("system")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
                 mainTab === "system"
@@ -179,6 +186,8 @@ export default function Home() {
           <OptimizationDashboard />
         ) : mainTab === "datacentre" ? (
           <DataCentreView />
+        ) : mainTab === "purchaseorders" ? (
+          <PurchaseOrdersDashboard />
         ) : (
           <div className="space-y-8">
             {/* Connectivity Check Card */}

@@ -1,7 +1,8 @@
 """Tenant-scoped festival calendar and evidence-based uplift service."""
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,11 @@ class FestivalIntelligenceService:
         self.db = db
         self.context = context
         self.business_id = context.business_id
+
+    def _local_midnight_utc(self, day: date) -> datetime:
+        return datetime.combine(day, time.min, tzinfo=ZoneInfo(self.context.timezone)).astimezone(
+            UTC
+        )
 
     def list_events(self) -> list[FestivalCalendarEvent]:
         return (
@@ -92,9 +98,9 @@ class FestivalIntelligenceService:
         source_ids: list[str] = [event.id]
         for past in past_events:
             baseline_start = past.start_date - timedelta(days=28)
-            start_dt = datetime.combine(baseline_start, time.min, tzinfo=UTC)
-            festival_start = datetime.combine(past.start_date, time.min, tzinfo=UTC)
-            festival_end = datetime.combine(past.end_date + timedelta(days=1), time.min, tzinfo=UTC)
+            start_dt = self._local_midnight_utc(baseline_start)
+            festival_start = self._local_midnight_utc(past.start_date)
+            festival_end = self._local_midnight_utc(past.end_date + timedelta(days=1))
             base_q = self._sales_query(start_dt, festival_start, event.category_id)
             fest_q = self._sales_query(festival_start, festival_end, event.category_id)
             base_rows, fest_rows = base_q.all(), fest_q.all()
@@ -157,10 +163,8 @@ class FestivalIntelligenceService:
         )
         evidence = EvidenceMetadata(
             source_record_ids=source_ids[:100],
-            date_window_start=datetime.combine(event.start_date, time.min, tzinfo=UTC),
-            date_window_end=datetime.combine(
-                event.end_date + timedelta(days=1), time.min, tzinfo=UTC
-            ),
+            date_window_start=self._local_midnight_utc(event.start_date),
+            date_window_end=self._local_midnight_utc(event.end_date + timedelta(days=1)),
             calculation_method="matched_festival_occurrence_vs_preceding_28_day_baseline",
             assumptions=assumptions,
             warnings=warnings,

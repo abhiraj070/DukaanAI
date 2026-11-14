@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -38,6 +38,11 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/dukaanai"
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    AI_MODEL: str = "google-gla:gemini-2.5-flash"
+    AI_TIMEOUT_SECONDS: int = 30
+    AI_MAX_REQUESTS: int = 5
 
     # Localization
     DEFAULT_CURRENCY: str = "INR"
@@ -45,6 +50,17 @@ class Settings(BaseSettings):
 
     # Ingestion / Upload limits
     MAX_UPLOAD_MB: int = 20
+
+    @model_validator(mode="after")
+    def validate_release_settings(self):
+        if self.APP_ENV.lower() in {"production", "prod"}:
+            if len(self.APP_SECRET_KEY) < 32 or self.APP_SECRET_KEY.startswith("development-"):
+                raise ValueError(
+                    "Production requires a unique APP_SECRET_KEY of at least 32 characters"
+                )
+            if "*" in self.cors_origins:
+                raise ValueError("Production CORS origins cannot include a wildcard")
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

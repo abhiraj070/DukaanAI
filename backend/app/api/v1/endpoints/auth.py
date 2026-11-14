@@ -1,9 +1,10 @@
 """Authentication and demo session token endpoints."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.errors import BadRequestError, UnauthorizedError
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
@@ -29,6 +30,8 @@ class AuthTokenResponse(BaseModel):
 @router.post("/demo-token", response_model=AuthTokenResponse)
 def get_demo_token(db: Session = Depends(get_db)) -> AuthTokenResponse:
     """Issue a verified access token for the default demo kirana store."""
+    if get_settings().APP_ENV.lower() not in {"development", "test"}:
+        raise HTTPException(status_code=404, detail="Not found")
     user = db.query(User).filter(User.is_active.is_(True)).first()
     business = db.query(Business).filter(Business.is_active.is_(True)).first()
 

@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from app.core.context import BusinessContext
 from app.core.errors import NotFoundError
-from app.domain.festivals.service import FestivalIntelligenceService
 from app.models.catalogue import Product, SupplierProduct
 from app.models.inventory import ForecastRun
 from app.models.operations import Sale, SaleItem
@@ -112,8 +111,8 @@ class InventoryService:
         product_id: str,
         horizon_days: int = 14,
         history_days: int = 30,
-        festival_event_id: str | None = None,
-        festival_assumed_uplift_pct: Decimal | None = None,
+        festival_uplift_pct: Decimal = Decimal("0.00"),
+        festival_source_ids: list[str] | None = None,
     ) -> DomainResult[DemandForecastResult]:
         """Select a baseline from available history, apply seasonal uplift, and persist evidence."""
         if not 1 <= horizon_days <= 365 or not 1 <= history_days <= 730:
@@ -174,15 +173,9 @@ class InventoryService:
             forecast_total = daily_demand * Decimal(str(horizon_days))
             method = "naive_history_mean"
 
-        festival_uplift_pct = Decimal("0.00")
-        if festival_event_id:
-            fest_res = FestivalIntelligenceService(self.db, self.context).estimate_uplift(
-                festival_event_id, festival_assumed_uplift_pct
-            )
-            if fest_res.data.planning_uplift_pct:
-                festival_uplift_pct = fest_res.data.planning_uplift_pct
-                forecast_total *= Decimal("1.00") + (festival_uplift_pct / Decimal("100.0"))
-                daily_demand *= Decimal("1.00") + (festival_uplift_pct / Decimal("100.0"))
+        if festival_uplift_pct:
+            forecast_total *= Decimal("1.00") + (festival_uplift_pct / Decimal("100.0"))
+            daily_demand *= Decimal("1.00") + (festival_uplift_pct / Decimal("100.0"))
 
         supplier_link = (
             self.db.query(SupplierProduct)
@@ -257,7 +250,7 @@ class InventoryService:
         )
 
         evidence = EvidenceMetadata(
-            source_record_ids=[item.id for item in sale_items],
+            source_record_ids=[item.id for item in sale_items] + (festival_source_ids or []),
             date_window_start=since_date,
             date_window_end=datetime.now(UTC),
             calculation_method=method,

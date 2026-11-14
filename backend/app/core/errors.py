@@ -102,6 +102,15 @@ class ConflictError(AppException):
         )
 
 
+class ServiceUnavailableError(AppException):
+    def __init__(self, message: str = "Service temporarily unavailable") -> None:
+        super().__init__(
+            message=message,
+            code="SERVICE_UNAVAILABLE",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+
 def get_request_id(request: Request) -> str:
     """Retrieve existing request ID from request state or fallback to a new uuid."""
     req_id = getattr(request.state, "request_id", None)
