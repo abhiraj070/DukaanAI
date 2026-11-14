@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  AlertCircle,
   ArrowRight,
   BarChart3,
   BookOpen,
@@ -16,7 +15,6 @@ import {
   Server,
   ShieldCheck,
   Store,
-  Terminal,
 } from "lucide-react";
 
 import { AnalyticsDashboard } from "@/features/analytics/AnalyticsDashboard";
@@ -276,32 +274,7 @@ export default function Home() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-rose-600 mt-0.5 shrink-0" />
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-rose-900">
-                          Backend Unreachable
-                        </h4>
-                        <p className="text-xs text-rose-700">
-                          {result?.error || "Could not establish connection to the FastAPI server."}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="bg-slate-900 text-slate-200 rounded-lg p-4 font-mono text-xs space-y-2">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <Terminal className="w-3.5 h-3.5" />
-                        <span>To start the backend server locally:</span>
-                      </div>
-                      <div className="text-emerald-400">
-                        cd backend<br />
-                        uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-                      </div>
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
             </div>
 

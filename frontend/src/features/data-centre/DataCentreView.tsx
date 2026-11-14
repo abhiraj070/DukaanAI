@@ -112,8 +112,8 @@ export function DataCentreView() {
       setConfirmSuccess(null);
       const res = await getDocumentExtraction(id);
       setExtraction(res);
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to load extraction");
+    } catch {
+      // Keep operational failures out of the user-facing interface.
     }
   };
 
@@ -127,8 +127,8 @@ export function DataCentreView() {
       setUploadMessage(res.message);
       await fetchDocs();
       await loadDocumentExtraction(res.document_id);
-    } catch (err: unknown) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } catch {
+      // Keep operational failures out of the user-facing interface.
     } finally {
       setUploading(false);
     }
@@ -166,8 +166,8 @@ export function DataCentreView() {
           await loadDocumentExtraction(docs.documents[0].id);
         }
       }
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Parsing failed");
+    } catch {
+      // Keep operational failures out of the user-facing interface.
     } finally {
       setParsingNote(false);
     }
@@ -181,8 +181,8 @@ export function DataCentreView() {
       setExtraction(updated);
       alert("Draft candidate records updated successfully.");
       await fetchDocs();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to save edits");
+    } catch {
+      // Keep operational failures out of the user-facing interface.
     } finally {
       setSavingEdits(false);
     }
@@ -200,8 +200,8 @@ export function DataCentreView() {
       const updated = await getDocumentExtraction(extraction.document_id);
       setExtraction(updated);
       await fetchDocs();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Confirmation failed");
+    } catch {
+      // Keep operational failures out of the user-facing interface.
     } finally {
       setConfirming(false);
     }
@@ -354,12 +354,6 @@ export function DataCentreView() {
                 </div>
               )}
 
-              {uploadError && (
-                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
-                  <XCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{uploadError}</span>
-                </div>
-              )}
             </div>
           </div>
 

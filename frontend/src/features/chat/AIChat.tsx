@@ -27,7 +27,7 @@ export function AIChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [mode, setMode] = useState<Mode>("general");
+  const [mode, setMode] = useState<Mode>("business");
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

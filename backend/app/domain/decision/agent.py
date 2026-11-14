@@ -1,6 +1,7 @@
 """Tenant-scoped decision orchestrator wrapping PydanticAI with strict tool contracts."""
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Any
 
 from pydantic_ai import Agent, RunContext
@@ -106,7 +107,15 @@ def create_decision_agent(model: Any = "test") -> Agent[AgentDependencies, Decis
                 "festival_demand_units": str(item.forecast_demand_period),
                 "on_hand": str(item.on_hand_stock),
                 "incoming": str(item.incoming_stock),
-                "suggested_to_buy": str(item.suggested_order_qty),
+                "suggested_to_buy": str(
+                    max(
+                        Decimal("0"),
+                        item.forecast_demand_period
+                        + item.safety_stock
+                        - item.on_hand_stock
+                        - item.incoming_stock,
+                    )
+                ),
                 "unit": item.unit,
                 "data_quality": item.data_quality,
             }

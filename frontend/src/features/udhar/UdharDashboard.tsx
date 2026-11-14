@@ -449,12 +449,6 @@ export function UdharDashboard() {
         </div>
       )}
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 bg-rose-50 text-rose-800 border border-rose-200 rounded-lg text-sm font-medium">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
 
       {/* Top Header & Summary KPI Cards */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
