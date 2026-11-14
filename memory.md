@@ -421,57 +421,51 @@ uff format --check backend (clean)
 - Deferred work: None.
 - Next phase: Phase 4 — Core business analytics.
 
-### Session 4 — Phase 3: Data Centre and Ingestion (Completed)
+### Session 5 — Phase 4: Core Business Analytics (Completed)
 
 - Date: 2026-11-14
 - Status: Completed and verified against acceptance gates.
 - Work completed:
-  - Added openpyxl 3.1.5 and pypdf 5.0.0 dependencies in pyproject.toml and requirements.txt.
-  - Domain models for physical document tracking and candidate extractions: UploadedDocument and DocumentExtraction (backend/app/models/document.py).
-  - Generated and executed second Alembic migration 2cab4187687c_add_documents_and_extractions.py.
-  - Defined Pydantic candidate schemas with provenance metadata: CandidateSale, CandidateSaleItem, CandidateExpense, CandidateCreditTransaction, DocumentExtractionData, DocumentConfirmRequest, DocumentConfirmResponse, ImportPreviewResponse (backend/app/schemas/ingestion.py).
-  - Storage service (backend/app/ingestion/storage.py) with SHA256 integrity validation, format allowlisting, and tenant-isolated disk storage.
-  - Multi-format parsing engine (backend/app/ingestion/parsers/):
-    - CSVParser: Tabular sales, expenses, and udhar ledger with flexible dates, currency cleanups, and explicit invalid_rows tracking.
-    - XLSXParser: Excel workbooks parsed into virtual CSV buffers using openpyxl.
-    - PDFParser: PDF invoice extraction for line items, quantities, and totals using pypdf.
-    - TextParser: Conversational Hindi, Hinglish, and English parsing for daily kirana notes; ambiguous direction detection (AMBIGUOUS_DIRECTION).
-  - Transactional & idempotent posting engine (backend/app/ingestion/posting.py):
-    - Draft-only invariant strictly enforced: domain tables are never modified during initial ingestion or parsing.
-    - Posting creates Sale, SaleItem, auto-dispatches physical stock movements (SALE_DISPATCH), creates Expense, and matches/creates Customer + CreditTransaction.
-    - Idempotent re-submission returns success with 0 duplicate sales/movements/credits.
-  - API endpoints (backend/app/api/v1/endpoints/):
-    - POST /api/v1/documents/upload: Multi-part upload, SHA256 duplicate checking, auto-extraction into draft candidates.
-    - GET /api/v1/documents: Scoped tenant listing of uploaded documents with status and ambiguity counts.
-    - GET /api/v1/documents/{document_id}: Extraction review endpoint returning candidate records, ambiguity flags, and invalid rows.
-    - PATCH /api/v1/documents/{document_id}/extraction: Owner candidate editing endpoint.
-    - POST /api/v1/documents/{document_id}/confirm: Transactional ledger posting endpoint.
-    - POST /api/v1/ingestion/text: Conversational text extraction with optional draft persistence.
-    - POST /api/v1/ingestion/preview: In-memory tabular preview without disk commitment.
-    - POST /api/v1/auth/demo-token & POST /api/v1/auth/login: Tenant session tokens for UI.
-  - Interactive Next.js Data Centre UI (frontend/src/features/data-centre/DataCentreView.tsx):
-    - Drag-and-drop file uploader with quick sample test templates.
-    - Hinglish / Hindi text input note parser.
-    - Extraction review screen with SHA-256 fingerprint badge, ambiguity alert banner, invalid row warnings, and editable candidate tables.
-    - One-click 'Confirm & Post to Ledger' button with confirmation metrics.
-    - Document ingestion history table.
+  - Timezone and date range resolution module (ackend/app/domain/analytics/date_ranges.py):
+    - Standard Asia/Kolkata timezone semantics for Indian retail accounting.
+    - Deterministic conversion of preset periods (TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, ALL_TIME) to UTC bounds.
+    - Local YYYY-MM-DD date formatting for daily trend aggregation.
+  - Enhanced Core Business Analytics domain service (ackend/app/domain/analytics/service.py):
+    - Gross revenue, sales returns deduction (status == 'RETURNED'), net revenue (gross_revenue - sales_returns).
+    - Cost of Goods Sold (COGS), Gross Profit (
+et_revenue - COGS), Gross Margin %, Total Units Sold.
+    - Net profit estimate (gross_profit - total_expenses).
+    - Integrated inventory valuation from movement balances (InventoryService) and inventory turnover ratio (COGS / inventory_valuation).
+    - Missing cost invariant strictly enforced: if cost price is missing for sold products, Gross Profit and COGS are unavailable (None), never guessed as 0.00.
+    - Category breakdown: sales volume, revenue share, COGS, and profit margin per product category.
+    - Daily timeline trends: bucketed daily revenue, net revenue, COGS, expenses, units, and transaction count.
+  - API Endpoints (ackend/app/api/v1/endpoints/analytics.py):
+    - GET /api/v1/analytics/kpis: High-level business KPIs with EvidenceMetadata.
+    - GET /api/v1/analytics/products: Top-performing and slow-moving product rankings.
+    - GET /api/v1/analytics/categories: Category volume and profitability breakdown.
+    - GET /api/v1/analytics/trends: Daily time-bucketed trend points for charts.
+  - Interactive Next.js Core Analytics Dashboard (rontend/src/features/analytics/AnalyticsDashboard.tsx):
+    - Period preset selector bar (Today, Yesterday, Last 7 Days, Last 30 Days, This Month, All Time).
+    - Top KPI cards: Gross & Net Revenue, COGS (with coverage badge), Gross Profit & Margin %, Expenses & Net Profit, Inventory Valuation & Turnover.
+    - Data coverage & missing cost warning alert banner.
+    - Daily revenue vs expense timeline trend visualization.
+    - Product performance & SKU rankings table with tab filters (Revenue, Units, Margin, Slow-Moving).
+    - Category breakdown cards with revenue share progress bars.
+    - Audit provenance & evidence drawer displaying calculation method, timezone, freshness, and assumptions.
 - Test results:
-  - 40 tests passing 100% across the backend in 6.64s.
-  - test_storage_service_validation_and_hashing: SHA-256 fingerprinting, tenant isolation, unsupported format rejection.
-  - test_csv_parser_sales_and_expenses: Tabular sales & expense extraction with line items and payment modes.
-  - test_csv_parser_udhar_ambiguity_and_invalid_rows: Ambiguous direction flags and invalid rows preserved without loss.
-  - test_xlsx_parser & test_pdf_parser: Multi-format parsing tests.
-  - test_text_parser_hindi_hinglish: Conversational Hindi/Hinglish credit vs repayment and utilities expense.
-  - test_upload_and_draft_only_invariant: Confirms zero mutations to authoritative domain tables before confirmation.
-  - test_duplicate_file_upload_detection: Duplicate file upload detected via SHA256 hash.
-  - test_review_and_patch_extraction: Owner editing resolves ambiguity flags.
-  - test_transactional_posting_and_idempotent_retry: 100% idempotent retry produces 0 duplicates.
-  - test_cross_tenant_document_isolation: Tenant B cannot access or confirm Tenant A's documents (404).
+  - 48 tests passing 100% across the backend in 6.70s.
+  - 	est_analytics_empty_data_returns_zero_without_error: Zero completed sales returns clean 0.00 without crashing.
+  - 	est_sales_returns_deduct_from_gross_revenue: Verified returned sales deduct from gross revenue to yield net revenue and reduce profit.
+  - 	est_date_boundary_resolution_kolkata_timezone: Precise 24-hour UTC boundary verification in Asia/Kolkata.
+  - 	est_kpi_overview_api_endpoint: End-to-end API test verifying DomainResult[KPIOverview] with evidence envelope.
+  - 	est_product_rankings_api_endpoint: Top products and slow movers ranking verification.
+  - 	est_category_breakdown_api_endpoint: Category revenue and margins API verification.
+  - 	est_analytics_trends_api_endpoint: Daily timeline trend points API verification.
+  - 	est_cross_tenant_analytics_isolation: Verified Tenant B cannot access or observe Tenant A's sales, revenue, or analytics evidence.
 - Decisions:
-  - Extracted documents always default to PENDING/PROCESSED draft states; owner review is mandatory before ledger posting.
-  - Invalid rows are never dropped silently; they are recorded in invalid_rows with source row number and validation error.
-  - Ambiguous transaction directions are tagged with AMBIGUOUS_DIRECTION and lower confidence score.
-  - SQLite in-memory test engine uses StaticPool to ensure thread-safe session sharing with FastAPI sync and async endpoints.
+  - Receivables are kept completely separate from cash and sales revenue (in adherence to invariant).
+  - All date filtering standardizes to Asia/Kolkata calendar boundaries and translates to UTC for SQL queries.
+  - Missing product costs report Gross Profit as None, with prominent warning alerts in UI and evidence metadata.
 - Known issues: None.
 - Deferred work: None.
-- Next phase: Phase 4 — Core business analytics.
+- Next phase: Phase 5 — Udhar Management.
