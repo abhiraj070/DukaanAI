@@ -1,0 +1,77 @@
+"""DukaanAI backend configuration module."""
+
+from functools import lru_cache
+
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment or .env file."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # Core App
+    APP_NAME: str = "DukaanAI"
+    APP_VERSION: str = "0.1.0"
+    APP_ENV: str = "development"
+    DEBUG: bool = False
+    APP_SECRET_KEY: str = Field(
+        default="development-insecure-secret-key-change-in-production-min32chars",
+        description="Application secret key for signing tokens / sessions",
+    )
+
+    # Server binding
+    BACKEND_HOST: str = "127.0.0.1"
+    BACKEND_PORT: int = 8000
+
+    # CORS
+    FRONTEND_ORIGIN: str = "http://localhost:3000"
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+    # Database
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/dukaanai"
+    GEMINI_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    AI_MODEL: str = "google-gla:gemini-2.5-flash"
+    AI_TIMEOUT_SECONDS: int = 30
+    AI_MAX_REQUESTS: int = 5
+
+    # Localization
+    DEFAULT_CURRENCY: str = "INR"
+    DEFAULT_TIMEZONE: str = "Asia/Kolkata"
+
+    # Ingestion / Upload limits
+    MAX_UPLOAD_MB: int = 20
+
+    @model_validator(mode="after")
+    def validate_release_settings(self):
+        if self.APP_ENV.lower() in {"production", "prod"}:
+            if len(self.APP_SECRET_KEY) < 32 or self.APP_SECRET_KEY.startswith("development-"):
+                raise ValueError(
+                    "Production requires a unique APP_SECRET_KEY of at least 32 characters"
+                )
+            if "*" in self.cors_origins:
+                raise ValueError("Production CORS origins cannot include a wildcard")
+        return self
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Compute list of all allowed origins including FRONTEND_ORIGIN."""
+        origins = set(self.ALLOWED_ORIGINS)
+        if self.FRONTEND_ORIGIN:
+            origins.add(self.FRONTEND_ORIGIN.rstrip("/"))
+        return list(origins)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Return cached instance of application settings."""
+    return Settings()
