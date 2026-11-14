@@ -168,6 +168,10 @@ async function authHeaders(): Promise<HeadersInit> {
   return headers;
 }
 
+export async function getAuthenticatedHeaders(): Promise<HeadersInit> {
+  return authHeaders();
+}
+
 /**
  * Perform a health check query against the DukaanAI FastAPI backend.
  */

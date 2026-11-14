@@ -618,3 +618,13 @@ et_revenue - COGS), Gross Margin %, Total Units Sold.
   - Purchase order receipts are idempotent and stock movements occur strictly on confirmed receipt.
 
 - Reverification after purchase-order integration: 19 domain/migration tests passed, 4 API tests deselected; scoped Ruff passed. Full test run still stalls during API tests. Repo-wide frontend lint was started but did not return output within the wait window; focused Phase 8/9 ESLint had passed earlier.
+
+### Session 9 — AI Chat implementation
+- Date: 2026-11-14
+- Status: In progress; implementation added, acceptance checks pending.
+- Added `/api/v1/chat` conversation CRUD and message endpoint. Authenticated user ownership is checked on every conversation operation. General mode uses a no-tool PydanticAI agent; Business Context resolves active membership server-side and reuses the existing Decision Lab agent and its typed tools/RAG.
+- Added `chat_conversations` / `chat_messages` migration and models. Messages are mode-tagged; context includes only the last 20 messages in the requested mode, preventing Business Context responses from flowing into General Chat after a mode switch.
+- Added responsive AI Chat panel with history, new/delete chat, example prompts, Business Context toggle, Enter/Shift+Enter, thinking/error display, copy and retry. Markdown support is intentionally lightweight (paragraphs, headings, bullets, fenced code); full tables/link rendering remains incomplete.
+- Integrated AI Chat navigation while leaving Decision Lab routes untouched.
+- Known gaps pending checks: no dedicated AI Chat automated API tests yet; stop-generation/streaming not provided; frontend does not render full Markdown tables/link semantics; exact integration relationship between frontend "AI Decision Lab" navigation and backend decision endpoints needs follow-up.
+- Follow-up: added `backend/tests/test_chat_api.py` for conversation ownership/authentication and Business Context membership. Backend compileall, focused Ruff check/format, frontend ESLint, TypeScript no-emit, and `git diff --check` passed. The targeted pytest run stalled at its first HTTP request (also `test_health.py` did not complete during the same window) and was interrupted; API behavior and migration application remain unverified. Do not mark the phase complete until those gates pass.

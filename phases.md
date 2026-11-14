@@ -252,6 +252,10 @@
 
 ## Cross-phase quality gates
 
+### Phase 14 — AI Chat
+- Add an authenticated, persistent general chat with explicit optional Business Context, reusing the existing PydanticAI business agent only in that mode.
+- Acceptance gate: migration applies; owner isolation and mode isolation are verified; General mode cannot access domain tools/RAG; history, errors and responsive UI are verified; Decision Lab APIs remain intact.
+
 Every phase maintains tenant context, Pydantic validation, calculation/ledger tests, Decimal/NUMERIC currency, secrets hygiene, no fabricated data/integrations, clear UI states and updated docs.
 
 ## Handoff template

@@ -11,6 +11,7 @@ import {
   Database,
   FileSpreadsheet,
   Layers,
+  MessageCircle,
   RefreshCw,
   Server,
   ShieldCheck,
@@ -25,6 +26,7 @@ import { SimulationDashboard } from "@/features/simulation/SimulationDashboard";
 import { FestivalDashboard } from "@/features/festivals/FestivalDashboard";
 import { OptimizationDashboard } from "@/features/optimization/OptimizationDashboard";
 import PurchaseOrdersDashboard from "@/features/purchase-orders/PurchaseOrdersDashboard";
+import { AIChat } from "@/features/chat/AIChat";
 import {
   API_BASE_URL,
   checkBackendHealth,
@@ -34,7 +36,7 @@ import {
 export default function Home() {
   const [result, setResult] = useState<ConnectivityResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "simulation" | "festivals" | "optimization" | "datacentre" | "purchaseorders" | "system">("analytics");
+  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "simulation" | "festivals" | "optimization" | "datacentre" | "purchaseorders" | "aichat" | "system">("analytics");
 
   const runCheck = async () => {
     setLoading(true);
@@ -140,6 +142,12 @@ export default function Home() {
               <Store className="w-3.5 h-3.5 text-amber-600" /><span>Purchase Orders</span>
             </button>
             <button
+              onClick={() => setMainTab("aichat")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${mainTab === "aichat" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-600" /><span>AI Chat</span>
+            </button>
+            <button
               onClick={() => setMainTab("system")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all ${
                 mainTab === "system"
@@ -188,6 +196,8 @@ export default function Home() {
           <DataCentreView />
         ) : mainTab === "purchaseorders" ? (
           <PurchaseOrdersDashboard />
+        ) : mainTab === "aichat" ? (
+          <AIChat />
         ) : (
           <div className="space-y-8">
             {/* Connectivity Check Card */}

@@ -7,7 +7,7 @@ from app.models.document import DocumentExtraction, UploadedDocument
 from app.models.festival import FestivalCalendarEvent
 from app.models.identity import Business, BusinessMembership, User
 from app.models.inventory import ForecastRun, InventoryMovement, MovementType
-from app.models.knowledge import Conversation, KnowledgeChunk
+from app.models.knowledge import ChatConversation, ChatMessage, Conversation, KnowledgeChunk
 from app.models.operations import Expense, Sale, SaleItem
 from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.models.simulation import ScenarioRun
@@ -47,5 +47,7 @@ __all__ = [
     "DocumentExtraction",
     "KnowledgeChunk",
     "Conversation",
+    "ChatConversation",
+    "ChatMessage",
     "FestivalCalendarEvent",
 ]
