@@ -12,6 +12,7 @@ from app.models.operations import Sale, SaleItem
 from app.repositories.inventory import InventoryRepository
 from app.schemas.common import DomainResult, EvidenceMetadata, round_curr, round_qty
 from app.schemas.optimization import (
+    OptimizationAlternative,
     OptimizationInput,
     OptimizationResult,
     ProcurementItemRecommendation,
@@ -70,6 +71,9 @@ class ProcurementOptimizerService:
             )
 
         candidates: list[dict] = []
+        skipped_missing_cost = 0
+        skipped_no_demand = 0
+        unconstrained_supplier_items = 0
 
         for p in products:
             daily_demand = demand_map.get(p.id, Decimal("0.000"))
@@ -86,28 +90,42 @@ class ProcurementOptimizerService:
             )
 
             unit_cost = supp_link.purchase_cost if supp_link else p.cost_price
-            moq = supp_link.moq if supp_link else Decimal("1.000")
-            pack_size = supp_link.pack_size if supp_link else Decimal("1.000")
+            moq = supp_link.moq if supp_link and supp_link.moq > 0 else None
+            pack_size = supp_link.pack_size if supp_link and supp_link.pack_size > 0 else None
 
             if unit_cost is None or unit_cost <= Decimal("0.00") or p.selling_price <= unit_cost:
+                skipped_missing_cost += 1
                 continue  # Skip items with missing or unprofitable cost
 
+            if daily_demand <= 0:
+                skipped_no_demand += 1
+                continue
+            if moq is None and pack_size is None:
+                unconstrained_supplier_items += 1
+
             # Needed stock over horizon + safety stock
+            incoming_stock = Decimal("0.000")
             target_stock = (daily_demand * Decimal(str(horizon))) + p.min_stock_level
-            net_need = target_stock - current_stock
+            net_need = target_stock - current_stock - incoming_stock
 
             if net_need <= Decimal("0.000"):
                 continue  # Stock is already sufficient
 
             # Round to supplier pack size and MOQ
-            order_qty = net_need if net_need >= moq else moq
-            if pack_size > Decimal("0"):
+            order_qty = net_need
+            if moq is not None and order_qty < moq:
+                order_qty = moq
+            if pack_size is not None:
                 mult = math.ceil(float(order_qty) / float(pack_size))
                 order_qty = Decimal(str(mult)) * pack_size
 
             total_cost = order_qty * unit_cost
-            expected_rev = order_qty * p.selling_price
-            expected_profit = expected_rev - total_cost
+            expected_units_sold = min(
+                order_qty,
+                max(Decimal("0.000"), daily_demand * Decimal(str(horizon)) - current_stock),
+            )
+            expected_rev = expected_units_sold * p.selling_price
+            expected_profit = expected_rev - (expected_units_sold * unit_cost)
 
             roi = expected_profit / total_cost if total_cost > Decimal("0") else Decimal("0")
 
@@ -125,6 +143,8 @@ class ProcurementOptimizerService:
                     "roi": roi,
                     "moq": moq,
                     "pack_size": pack_size,
+                    "expected_units_sold": expected_units_sold,
+                    "incoming_stock": incoming_stock,
                 }
             )
 
@@ -132,6 +152,7 @@ class ProcurementOptimizerService:
         candidates.sort(key=lambda x: x["roi"], reverse=True)
 
         recommendations: list[ProcurementItemRecommendation] = []
+        alternatives: list[OptimizationAlternative] = []
         budget_remaining = budget
         total_allocated = Decimal("0.00")
         total_rev = Decimal("0.00")
@@ -139,30 +160,41 @@ class ProcurementOptimizerService:
 
         for c in candidates:
             cost = c["total_cost"]
+            recommendation = ProcurementItemRecommendation(
+                product_id=c["product"].id,
+                product_name=c["product"].name,
+                sku=c["product"].sku,
+                supplier_name=c["supplier_name"],
+                unit=c["product"].unit,
+                current_stock=round_qty(c["current_stock"]),
+                daily_demand=round_qty(c["daily_demand"]),
+                order_quantity=round_qty(c["order_qty"]),
+                unit_cost=round_curr(c["unit_cost"]),
+                total_cost=round_curr(cost),
+                expected_selling_price=round_curr(c["product"].selling_price),
+                expected_revenue=round_curr(c["expected_rev"]),
+                expected_gross_profit=round_curr(c["expected_profit"]),
+                target_coverage_days=horizon,
+                moq_applied=round_qty(c["moq"]),
+                pack_size_applied=round_qty(c["pack_size"]),
+                expected_units_sold=round_qty(c["expected_units_sold"]),
+                incoming_stock=round_qty(c["incoming_stock"]),
+            )
             if budget_remaining >= cost:
                 budget_remaining -= cost
                 total_allocated += cost
                 total_rev += c["expected_rev"]
                 total_profit += c["expected_profit"]
 
-                recommendations.append(
-                    ProcurementItemRecommendation(
-                        product_id=c["product"].id,
-                        product_name=c["product"].name,
-                        sku=c["product"].sku,
-                        supplier_name=c["supplier_name"],
-                        unit=c["product"].unit,
-                        current_stock=round_qty(c["current_stock"]),
-                        daily_demand=round_qty(c["daily_demand"]),
-                        order_quantity=round_qty(c["order_qty"]),
-                        unit_cost=round_curr(c["unit_cost"]),
-                        total_cost=round_curr(cost),
-                        expected_selling_price=round_curr(c["product"].selling_price),
-                        expected_revenue=round_curr(c["expected_rev"]),
-                        expected_gross_profit=round_curr(c["expected_profit"]),
-                        target_coverage_days=horizon,
-                        moq_applied=round_qty(c["moq"]),
-                        pack_size_applied=round_qty(c["pack_size"]),
+                recommendations.append(recommendation)
+            else:
+                alternatives.append(
+                    OptimizationAlternative(
+                        recommendation=recommendation,
+                        reason_not_selected=(
+                            f"Order costs ₹{round_curr(cost)} but only "
+                            f"₹{round_curr(budget_remaining)} remains in budget."
+                        ),
                     )
                 )
 
@@ -172,6 +204,25 @@ class ProcurementOptimizerService:
             else Decimal("0.00")
         )
 
+        warnings = (
+            (
+                [f"{skipped_missing_cost} products skipped for missing or unprofitable cost."]
+                if skipped_missing_cost
+                else []
+            )
+            + (
+                [f"{skipped_no_demand} products skipped because no recent demand was observed."]
+                if skipped_no_demand
+                else []
+            )
+            + (
+                [f"{unconstrained_supplier_items} products have no configured MOQ or pack size."]
+                if unconstrained_supplier_items
+                else []
+            )
+            + ["Incoming purchase orders are not modeled and were treated as zero."]
+        )
+
         result = OptimizationResult(
             budget_allocated=round_curr(total_allocated),
             budget_remaining=round_curr(budget_remaining),
@@ -179,6 +230,8 @@ class ProcurementOptimizerService:
             total_expected_gross_profit=round_curr(total_profit),
             roi_pct=roi_pct,
             recommendations=recommendations,
+            alternatives=alternatives,
+            warnings=warnings,
         )
 
         evidence = EvidenceMetadata(
@@ -190,11 +243,19 @@ class ProcurementOptimizerService:
                 f"Budget constraint: ₹{budget}",
                 f"Coverage horizon: {horizon} days",
                 "Receivables excluded from cash unless specified",
+                "Existing on-hand stock is deducted before procurement need is calculated",
+                "Expected sales are capped by forecast demand net of on-hand stock",
             ],
             freshness_timestamp=datetime.now(UTC),
-            warnings=[]
-            if recommendations
-            else ["Budget insufficient to satisfy minimum supplier MOQ constraints."],
+            warnings=warnings
+            + (
+                []
+                if recommendations
+                else [
+                    "Budget insufficient to fund a recommended order, or no feasible "
+                    "demand candidates were found."
+                ]
+            ),
         )
 
         return DomainResult(data=result, evidence=evidence)

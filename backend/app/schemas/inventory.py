@@ -40,6 +40,7 @@ class DemandForecastResult(BaseModel):
     sku: str | None = None
     unit: str
     on_hand_stock: Decimal
+    incoming_stock: Decimal = Decimal("0.000")
     historical_daily_demand: Decimal
     horizon_days: int
     forecast_demand_period: Decimal
@@ -58,6 +59,9 @@ class DemandForecastResult(BaseModel):
     )
     estimated_cost: Decimal | None = None
     data_quality: str = Field(..., description="'RELIABLE', 'SPARSE', or 'NO_HISTORY'")
+    forecast_method: str = "rolling_mean"
+    training_window_days: int = 30
+    model_version: str = "inventory_forecast_v2"
 
 
 class StoreInventorySummary(BaseModel):

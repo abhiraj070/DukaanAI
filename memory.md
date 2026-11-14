@@ -540,3 +540,24 @@ et_revenue - COGS), Gross Margin %, Total Units Sold.
 - Known issues: None.
 - Deferred work: None.
 - Next phase: Phase 6 — Predictive Inventory Intelligence.
+
+### Session 6 — Phases 6 and 7 started
+
+- Date: 2026-11-14
+- Status: Implemented the first predictive inventory and what-if simulation slices; acceptance gates remain open.
+- Phase 6 work:
+  - Forecast method selection now uses zero-demand, naive-history, 7-day rolling mean, and weekday-aware baselines according to history volume.
+  - Reorder calculations use supplier-product lead time when set, count only explicitly configured MOQ/pack constraints, and persist forecast result/evidence with model version.
+  - Added a tenant-authenticated forecast endpoint and migration.
+  - Limitation: No purchase-order entity exists yet; incoming quantity is explicitly treated as zero and warned in evidence.
+- Phase 7 work:
+  - Added validation for impossible demand/price/cost changes, negative collections, blank names, and duplicate product overrides.
+  - Added separate purchase outflow and supply-delay fields, tenant-scoped scenario persistence/listing, API endpoints, and scenario comparison UI.
+  - Limitation: Supply-delay input is recorded and warned about, but no PO data exists to calculate a stock availability impact. Purchase outflow and udhar collections remain separate estimates, not realized cash.
+- Verification:
+  - `ruff check backend`: passed.
+  - Focused inventory, simulation, and migration tests: 4 passed.
+  - `pnpm --dir frontend lint`: passed.
+  - Full backend pytest run stalls during the analytics API tests; focused phase tests pass. Needs diagnosis.
+  - `pnpm --dir frontend build`: Turbopack failed while starting its CSS worker; `pnpm --dir frontend exec next build --webpack` then failed fetching Geist fonts because `fonts.googleapis.com` is unavailable in this environment.
+- Next: Add explicit incoming-PO source and complete delay/purchase scenario semantics; diagnose full-suite stall and complete Phase 6/7 delivery gates.

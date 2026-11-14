@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class OptimizationInput(BaseModel):
@@ -26,6 +26,12 @@ class OptimizationInput(BaseModel):
         description="Whether to count expected customer receivables as cash (Default: False)",
     )
 
+    @model_validator(mode="after")
+    def receivables_are_not_procurement_cash(self):
+        if self.include_receivables:
+            raise ValueError("Receivables cannot be counted as procurement cash")
+        return self
+
 
 class ProcurementItemRecommendation(BaseModel):
     """Specific SKU replenishment recommendation."""
@@ -48,8 +54,17 @@ class ProcurementItemRecommendation(BaseModel):
     expected_revenue: Decimal
     expected_gross_profit: Decimal
     target_coverage_days: int
-    moq_applied: Decimal
-    pack_size_applied: Decimal
+    moq_applied: Decimal | None = None
+    pack_size_applied: Decimal | None = None
+    expected_units_sold: Decimal = Decimal("0.000")
+    incoming_stock: Decimal = Decimal("0.000")
+
+
+class OptimizationAlternative(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    recommendation: ProcurementItemRecommendation
+    reason_not_selected: str
 
 
 class OptimizationResult(BaseModel):
@@ -63,5 +78,11 @@ class OptimizationResult(BaseModel):
     total_expected_gross_profit: Decimal
     roi_pct: Decimal
     recommendations: list[ProcurementItemRecommendation]
+    alternatives: list[OptimizationAlternative] = Field(default_factory=list)
+    explanation: str = (
+        "Ranks feasible replenishment candidates by expected gross contribution "
+        "per rupee under the stated budget."
+    )
+    warnings: list[str] = Field(default_factory=list)
     objective: str = "maximize expected gross contribution under budget and supplier constraints"
     method: str = "discrete_knapsack_with_moq_and_pack_size"

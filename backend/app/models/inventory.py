@@ -6,9 +6,11 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    JSON,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -91,4 +93,28 @@ class InventoryMovement(Base):
     __table_args__ = (
         Index("ix_inv_movements_business_product", "business_id", "product_id"),
         Index("ix_inv_movements_business_created", "business_id", "created_at"),
+    )
+
+
+class ForecastRun(Base):
+    """Persist forecast result and method metadata for reproducibility."""
+
+    __tablename__ = "inventory_forecast_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    business_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    product_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    model_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    forecast_method: Mapped[str] = mapped_column(String(40), nullable=False)
+    training_window_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    result_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    evidence_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False, index=True
+    )
+    __table_args__ = (
+        Index("ix_forecast_run_business_product_time", "business_id", "product_id", "created_at"),
     )

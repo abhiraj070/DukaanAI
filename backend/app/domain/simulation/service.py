@@ -6,8 +6,11 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 
 from app.core.context import BusinessContext
+from app.core.errors import BadRequestError
+from app.domain.festivals.service import FestivalIntelligenceService
 from app.models.catalogue import Product
 from app.models.operations import Sale, SaleItem
+from app.models.simulation import ScenarioRun
 from app.schemas.common import DomainResult, EvidenceMetadata, round_curr
 from app.schemas.simulation import (
     SimulationInput,
@@ -87,13 +90,36 @@ class SimulationService:
 
         # Map item overrides
         item_overrides = {item.product_id: item for item in input_data.items}
+        valid_product_ids = {
+            product_id
+            for (product_id,) in self.db.query(Product.id)
+            .filter(Product.business_id == self.business_id)
+            .all()
+        }
+        if set(item_overrides) - valid_product_ids:
+            raise BadRequestError("Scenario includes a product outside the current business")
 
         simulated_rev = Decimal("0.00")
         simulated_cogs = Decimal("0.00") if not has_missing_cogs else None
 
-        general_demand_mult = Decimal("1.00") + (
-            input_data.general_demand_uplift_pct / Decimal("100.0")
-        )
+        festival_source_ids: list[str] = []
+        festival_assumptions: list[str] = []
+        festival_multiplier = Decimal("1.00")
+        if input_data.festival_event_id:
+            festival_result = FestivalIntelligenceService(self.db, self.context).estimate_uplift(
+                input_data.festival_event_id, input_data.festival_assumed_uplift_pct
+            )
+            if festival_result.data.planning_uplift_pct is None:
+                raise BadRequestError(
+                    "Festival history is insufficient; provide festival_assumed_uplift_pct."
+                )
+            festival_multiplier += festival_result.data.planning_uplift_pct / Decimal("100")
+            festival_source_ids.extend(festival_result.evidence.source_record_ids)
+            festival_assumptions.extend(festival_result.data.assumptions)
+
+        general_demand_mult = (
+            Decimal("1.00") + input_data.general_demand_uplift_pct / Decimal("100.0")
+        ) * festival_multiplier
 
         for pid, d in daily_baseline.items():
             p: Product = d["product"]
@@ -152,9 +178,18 @@ class SimulationService:
                 f"Expected udhar collections (₹{input_data.expected_udhar_collections}) "
                 "are scenario inputs, not guaranteed cash"
             ),
-        ]
-
+        ] + festival_assumptions
         risks = []
+        if input_data.purchase_cash_outflow:
+            assumptions.append(
+                "Purchase cash outflow is kept separate from gross profit and receivables."
+            )
+        if input_data.supply_delay_days:
+            risks.append(
+                "Supply delay is recorded as an assumption; "
+                "purchase order availability is not modeled."
+            )
+
         if has_missing_cogs:
             risks.append(
                 "Missing cost prices on some historical products; profit projections unavailable."
@@ -167,12 +202,14 @@ class SimulationService:
             cogs=cogs_delta,
             gross_profit=profit_delta,
             cash_collected_estimate=round_curr(input_data.expected_udhar_collections),
+            purchase_cash_outflow=round_curr(input_data.purchase_cash_outflow),
+            supply_delay_days=input_data.supply_delay_days,
             assumptions_applied=assumptions,
             constraints_and_risks=risks,
         )
 
         evidence = EvidenceMetadata(
-            source_record_ids=[item.id for item in sale_items[:50]],
+            source_record_ids=([item.id for item in sale_items[:50]] + festival_source_ids)[:100],
             date_window_start=since_date,
             date_window_end=datetime.now(UTC),
             calculation_method="deterministic_what_if_scenario_modeling",
@@ -181,4 +218,36 @@ class SimulationService:
             warnings=risks,
         )
 
+        run = ScenarioRun(
+            business_id=self.business_id,
+            scenario_name=input_data.scenario_name,
+            model_version=result.model_version,
+            input_json=input_data.model_dump(mode="json"),
+            result_json=result.model_dump(mode="json"),
+            evidence_json=evidence.model_dump(mode="json"),
+        )
+        self.db.add(run)
+        self.db.commit()
+
         return DomainResult(data=result, evidence=evidence)
+
+    def list_scenarios(self, limit: int = 20) -> list[dict]:
+        runs = (
+            self.db.query(ScenarioRun)
+            .filter(ScenarioRun.business_id == self.business_id)
+            .order_by(ScenarioRun.created_at.desc())
+            .limit(max(1, min(limit, 100)))
+            .all()
+        )
+        return [
+            {
+                "id": r.id,
+                "scenario_name": r.scenario_name,
+                "model_version": r.model_version,
+                "created_at": r.created_at.isoformat(),
+                "input": r.input_json,
+                "result": r.result_json,
+                "evidence": r.evidence_json,
+            }
+            for r in runs
+        ]

@@ -3,8 +3,12 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
+from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.core.security import create_access_token
 from app.domain.optimization.service import ProcurementOptimizerService
 from app.models.catalogue import Product, Supplier, SupplierProduct
 from app.models.operations import Sale, SaleItem
@@ -118,9 +122,39 @@ def test_procurement_optimizer_strictly_respects_budget(db_session: Session, ten
     assert "High Margin Biscuits" in rec_names
     assert "Medium Margin Detergent" in rec_names
     assert "Expensive Olive Oil" not in rec_names
+    assert [a.recommendation.product_name for a in result.alternatives] == ["Expensive Olive Oil"]
+    assert "only ₹2500.00 remains" in result.alternatives[0].reason_not_selected
+    assert result.recommendations[0].expected_units_sold == Decimal("20.000")
+    assert (
+        result.warnings[-1] == "Incoming purchase orders are not modeled and were treated as zero."
+    )
 
     # Check pack size and MOQ applied
     for r in result.recommendations:
         assert r.order_quantity == Decimal("25.000")
         assert r.order_quantity >= r.moq_applied
         assert r.order_quantity % r.pack_size_applied == Decimal("0.000")
+
+
+def test_receivables_cannot_be_used_as_procurement_budget():
+    with pytest.raises(ValidationError):
+        OptimizationInput(budget_inr=Decimal("1000"), include_receivables=True)
+
+
+def test_procurement_optimization_api(client: TestClient, tenants: dict):
+    """Test authenticated POST /api/v1/optimization/procurement endpoint."""
+    user_a = tenants["tenant_a"]["user"]
+    token_a = create_access_token({"sub": user_a.id})
+    headers = {"Authorization": f"Bearer {token_a}"}
+
+    payload = {
+        "budget_inr": 5000.0,
+        "planning_horizon_days": 14,
+    }
+    resp = client.post("/api/v1/optimization/procurement", json=payload, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert "budget_allocated" in data
+    assert "budget_remaining" in data
+    assert "recommendations" in data
+    assert Decimal(data["budget_allocated"]) <= Decimal("5000.00")

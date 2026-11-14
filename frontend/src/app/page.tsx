@@ -21,6 +21,9 @@ import {
 import { AnalyticsDashboard } from "@/features/analytics/AnalyticsDashboard";
 import { DataCentreView } from "@/features/data-centre/DataCentreView";
 import { UdharDashboard } from "@/features/udhar/UdharDashboard";
+import { SimulationDashboard } from "@/features/simulation/SimulationDashboard";
+import { FestivalDashboard } from "@/features/festivals/FestivalDashboard";
+import { OptimizationDashboard } from "@/features/optimization/OptimizationDashboard";
 import {
   API_BASE_URL,
   checkBackendHealth,
@@ -30,7 +33,7 @@ import {
 export default function Home() {
   const [result, setResult] = useState<ConnectivityResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "datacentre" | "system">("analytics");
+  const [mainTab, setMainTab] = useState<"analytics" | "udhar" | "simulation" | "festivals" | "optimization" | "datacentre" | "system">("analytics");
 
   const runCheck = async () => {
     setLoading(true);
@@ -101,6 +104,24 @@ export default function Home() {
               <span>Udhar (Khata)</span>
             </button>
             <button
+              onClick={() => setMainTab("simulation")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${mainTab === "simulation" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <ArrowRight className="w-3.5 h-3.5 text-violet-600" /><span>What-if</span>
+            </button>
+            <button
+              onClick={() => setMainTab("festivals")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${mainTab === "festivals" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-amber-600" /><span>Festivals</span>
+            </button>
+            <button
+              onClick={() => setMainTab("optimization")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${mainTab === "optimization" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-blue-600" /><span>Optimize</span>
+            </button>
+            <button
               onClick={() => setMainTab("datacentre")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
                 mainTab === "datacentre"
@@ -150,6 +171,12 @@ export default function Home() {
           <AnalyticsDashboard />
         ) : mainTab === "udhar" ? (
           <UdharDashboard />
+        ) : mainTab === "simulation" ? (
+          <SimulationDashboard />
+        ) : mainTab === "festivals" ? (
+          <FestivalDashboard />
+        ) : mainTab === "optimization" ? (
+          <OptimizationDashboard />
         ) : mainTab === "datacentre" ? (
           <DataCentreView />
         ) : (
