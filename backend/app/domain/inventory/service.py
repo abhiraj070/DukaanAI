@@ -5,11 +5,13 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from app.core.context import BusinessContext
 from app.core.errors import NotFoundError
 from app.models.catalogue import Product, SupplierProduct
 from app.models.inventory import ForecastRun
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.models.operations import Sale, SaleItem
 from app.repositories.inventory import InventoryRepository
 from app.schemas.common import DomainResult, EvidenceMetadata, round_curr, round_qty
@@ -201,7 +203,22 @@ class InventoryService:
             days_of_cover = None
             data_quality = "NO_HISTORY"
 
-        incoming_stock = Decimal("0.000")
+        incoming_value = (
+            self.db.query(
+                func.coalesce(
+                    func.sum(PurchaseOrderItem.quantity - PurchaseOrderItem.received_quantity), 0
+                )
+            )
+            .join(PurchaseOrder, PurchaseOrderItem.purchase_order_id == PurchaseOrder.id)
+            .filter(
+                PurchaseOrder.business_id == self.business_id,
+                PurchaseOrderItem.business_id == self.business_id,
+                PurchaseOrderItem.product_id == product.id,
+                PurchaseOrder.status.in_(["APPROVED", "PARTIALLY_RECEIVED"]),
+            )
+            .scalar()
+        )
+        incoming_stock = Decimal(str(incoming_value or 0))
         usable_stock = current_stock + incoming_stock
         is_reorder_needed = usable_stock <= reorder_point
 
@@ -275,7 +292,7 @@ class InventoryService:
                 if data_quality == "RELIABLE"
                 else ["Sparse sales history; forecast uncertainty is high."]
             )
-            + ["Purchase orders are not modeled; incoming stock is treated as zero."],
+            + (["Approved purchase orders are counted as incoming without a delivery-date estimate."] if incoming_stock else []),
         )
 
         self.db.add(

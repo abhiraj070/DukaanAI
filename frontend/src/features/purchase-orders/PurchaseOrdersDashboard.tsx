@@ -8,7 +8,12 @@ export default function PurchaseOrdersDashboard() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   const refresh = async () => { try { setOrders(await listPurchaseOrders()); setError(""); } catch (e) { setError(e instanceof Error ? e.message : "Could not load purchase orders"); } };
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => {
+    let active = true;
+    listPurchaseOrders().then(value => { if (active) setOrders(value); })
+      .catch(e => { if (active) setError(e instanceof Error ? e.message : "Could not load purchase orders"); });
+    return () => { active = false; };
+  }, []);
   const run = async (id: string, action: "approve" | "cancel") => {
     setBusy(id);
     try { await (action === "approve" ? approvePurchaseOrder(id) : cancelPurchaseOrder(id)); await refresh(); }
