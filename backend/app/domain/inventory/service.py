@@ -4,15 +4,15 @@ import math
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.core.context import BusinessContext
 from app.core.errors import NotFoundError
 from app.models.catalogue import Product, SupplierProduct
 from app.models.inventory import ForecastRun
-from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.models.operations import Sale, SaleItem
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.repositories.inventory import InventoryRepository
 from app.schemas.common import DomainResult, EvidenceMetadata, round_curr, round_qty
 from app.schemas.inventory import (
@@ -292,7 +292,14 @@ class InventoryService:
                 if data_quality == "RELIABLE"
                 else ["Sparse sales history; forecast uncertainty is high."]
             )
-            + (["Approved purchase orders are counted as incoming without a delivery-date estimate."] if incoming_stock else []),
+            + (
+                [
+                    "Approved purchase orders are counted as incoming without "
+                    "a delivery-date estimate."
+                ]
+                if incoming_stock
+                else []
+            ),
         )
 
         self.db.add(

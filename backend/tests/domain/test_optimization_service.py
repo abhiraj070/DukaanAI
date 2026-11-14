@@ -126,7 +126,8 @@ def test_procurement_optimizer_strictly_respects_budget(db_session: Session, ten
     assert "only ₹2500.00 remains" in result.alternatives[0].reason_not_selected
     assert result.recommendations[0].expected_units_sold == Decimal("20.000")
     assert (
-        result.warnings[-1] == "Incoming purchase orders are not modeled and were treated as zero."
+        result.warnings[-1]
+        == "Approved and partially received purchase orders are counted by remaining quantity."
     )
 
     # Check pack size and MOQ applied

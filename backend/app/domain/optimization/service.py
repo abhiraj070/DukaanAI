@@ -4,11 +4,13 @@ import math
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.context import BusinessContext
 from app.models.catalogue import Product, SupplierProduct
 from app.models.operations import Sale, SaleItem
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.repositories.inventory import InventoryRepository
 from app.schemas.common import DomainResult, EvidenceMetadata, round_curr, round_qty
 from app.schemas.optimization import (
@@ -78,6 +80,23 @@ class ProcurementOptimizerService:
         for p in products:
             daily_demand = demand_map.get(p.id, Decimal("0.000"))
             current_stock = self.inv_repo.get_stock(p.id)
+            incoming_value = (
+                self.db.query(
+                    func.coalesce(
+                        func.sum(PurchaseOrderItem.quantity - PurchaseOrderItem.received_quantity),
+                        0,
+                    )
+                )
+                .join(PurchaseOrder, PurchaseOrderItem.purchase_order_id == PurchaseOrder.id)
+                .filter(
+                    PurchaseOrder.business_id == self.business_id,
+                    PurchaseOrderItem.business_id == self.business_id,
+                    PurchaseOrderItem.product_id == p.id,
+                    PurchaseOrder.status.in_(["APPROVED", "PARTIALLY_RECEIVED"]),
+                )
+                .scalar()
+            )
+            incoming_stock = Decimal(str(incoming_value or 0))
 
             # Check supplier specifications
             supp_link = (
@@ -104,7 +123,6 @@ class ProcurementOptimizerService:
                 unconstrained_supplier_items += 1
 
             # Needed stock over horizon + safety stock
-            incoming_stock = Decimal("0.000")
             target_stock = (daily_demand * Decimal(str(horizon))) + p.min_stock_level
             net_need = target_stock - current_stock - incoming_stock
 
@@ -122,7 +140,10 @@ class ProcurementOptimizerService:
             total_cost = order_qty * unit_cost
             expected_units_sold = min(
                 order_qty,
-                max(Decimal("0.000"), daily_demand * Decimal(str(horizon)) - current_stock),
+                max(
+                    Decimal("0.000"),
+                    daily_demand * Decimal(str(horizon)) - current_stock - incoming_stock,
+                ),
             )
             expected_rev = expected_units_sold * p.selling_price
             expected_profit = expected_rev - (expected_units_sold * unit_cost)
@@ -220,7 +241,7 @@ class ProcurementOptimizerService:
                 if unconstrained_supplier_items
                 else []
             )
-            + ["Incoming purchase orders are not modeled and were treated as zero."]
+            + ["Approved and partially received purchase orders are counted by remaining quantity."]
         )
 
         result = OptimizationResult(
@@ -242,8 +263,8 @@ class ProcurementOptimizerService:
             assumptions=[
                 f"Budget constraint: ₹{budget}",
                 f"Coverage horizon: {horizon} days",
-                "Receivables excluded from cash unless specified",
-                "Existing on-hand stock is deducted before procurement need is calculated",
+                "Receivables are excluded from the procurement budget",
+                "On-hand and approved incoming quantities are deducted from procurement need",
                 "Expected sales are capped by forecast demand net of on-hand stock",
             ],
             freshness_timestamp=datetime.now(UTC),
