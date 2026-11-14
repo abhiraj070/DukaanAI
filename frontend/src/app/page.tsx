@@ -71,7 +71,7 @@ export default function Home() {
                   DukaanAI
                 </h1>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  Phase 5 Verified
+                  Phases 0-12 Verified
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">
