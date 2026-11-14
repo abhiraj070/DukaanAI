@@ -213,9 +213,9 @@ After coding:
 - Do not assume any phase is complete.
 - First action: inspect repository, then execute Phase 0 in `phases.md`.
 
-**Current phase:** Phase 1 — Domain model, database and tenant security  
-**Current status:** Phase 0 complete and verified. Ready to start Phase 1.  
-**Confirmed implementation:** Phase 0 foundation established (FastAPI backend with /health and /api/v1/health, request ID propagation, standardized error envelopes, pytest suite, ruff linter/formatter, Next.js TypeScript frontend with connectivity checker, .env.example, and README).
+**Current phase:** Phase 6 — Predictive Inventory Intelligence  
+**Current status:** Phase 5 complete and verified. Ready to start Phase 6.  
+**Confirmed implementation:** Phase 0–5 foundations fully established and gate-verified (FastAPI backend, Alembic migrations, multi-tenant security, deterministic domain services, multimodal ingestion data centre, core business analytics, and udhar customer credit ledger with running-balance statements and un-sent reminder preview drafts).
 
 ### Decisions/blockers to verify
 - Python 3.12 verified and configured in ackend/.venv.
@@ -469,3 +469,74 @@ et_revenue - COGS), Gross Margin %, Total Units Sold.
 - Known issues: None.
 - Deferred work: None.
 - Next phase: Phase 5 — Udhar Management.
+
+### Session 6 — Phase 5: Udhar Management (Completed)
+
+- Date: 2026-11-14
+- Status: Completed and verified against acceptance gates.
+- Work completed:
+  - Udhar domain models & schema additions (`backend/app/models/udhar.py`, `backend/app/schemas/udhar.py`):
+    - Added `OPENING_BALANCE` to `TransactionType` for owner-confirmed starting debt.
+    - Added typed schemas: `CustomerCreate`, `CustomerUpdate`, `CustomerResponse`, `CustomerCreateResponse`, `CustomerDuplicateMatch`.
+    - Added credit schemas: `ChargeCreate`, `ChargeResponse`, `RepaymentCreate`, `RepaymentResponse`, `AllocationInput`, `AllocationResponse`, `ReversalCreate`, `ReversalResponse`.
+    - Added statement & reminder schemas: `CustomerLedgerResponse`, `ReminderDraftRequest`, `ReminderDraftResponse`.
+  - Customer repository enhancement (`backend/app/repositories/customer.py`):
+    - Multi-tenant customer search and active/archived directory filtering.
+    - Duplicate detection checking exact phone matches and case-insensitive trimmed name matches.
+    - Owner-confirmed opening balance recording upon customer creation.
+    - Soft-delete customer archiving (`is_active = False`, `archived_at`) and restoration.
+  - Udhar ledger repository enhancement (`backend/app/repositories/udhar.py`):
+    - Chronological running-balance calculation including charges, opening balances, repayments, debit/credit adjustments, and compensating reversals.
+    - Automatic FIFO repayment allocation across open charges (`auto_allocate_repayment`).
+    - Explicit multi-charge manual repayment allocations with over-allocation prevention.
+    - Compensating reversal workflow with allocation cleanup and `AuditLog` recording.
+  - Udhar domain service (`backend/app/domain/udhar/service.py`):
+    - Store-wide udhar summary with 5 overdue aging buckets (`NOT_DUE`, `1_7_DAYS`, `8_30_DAYS`, `31_60_DAYS`, `60_PLUS_DAYS`).
+    - Customer profile with derived balance, overdue amount, worst aging status, and transaction count.
+    - Credit limit threshold checks emitting non-blocking owner warnings when exceeded.
+    - Reconciled customer statements with date range filtering: `closing_balance == opening_balance + total_charges - total_repayments`.
+    - Multilingual un-sent reminder draft preview in Hinglish, Hindi, and English with WhatsApp click-to-chat link and privacy disclaimer.
+  - REST API Endpoints (`backend/app/api/v1/endpoints/udhar.py`):
+    - `GET /api/v1/udhar/summary`
+    - `GET /api/v1/udhar/customers` (with query and include_archived filters)
+    - `POST /api/v1/udhar/customers` (with opening balance and duplicate detection)
+    - `GET /api/v1/udhar/customers/{id}` & `PUT /api/v1/udhar/customers/{id}`
+    - `POST /api/v1/udhar/customers/{id}/archive` & `POST /api/v1/udhar/customers/{id}/unarchive`
+    - `GET /api/v1/udhar/customers/{id}/ledger`
+    - `GET /api/v1/udhar/customers/{id}/statement`
+    - `POST /api/v1/udhar/customers/{id}/reminder-draft`
+    - `POST /api/v1/udhar/charges`
+    - `POST /api/v1/udhar/repayments`
+    - `POST /api/v1/udhar/transactions/{id}/reverse`
+  - Next.js Udhar Management UI (`frontend/src/features/udhar/UdharDashboard.tsx`):
+    - Top summary cards: Total Receivables, Total Overdue, Active Debt Customers.
+    - 5 color-coded aging distribution pills with customer counts and amounts.
+    - Searchable customer directory table with active/archived toggle and quick action buttons.
+    - Add Customer modal with real-time duplicate warning indicator.
+    - Give Udhar modal with dynamic credit limit excess alert.
+    - Receive Repayment modal with payment modes (CASH, UPI, Bank Transfer, Cheque, Other) and FIFO auto-allocation.
+    - Customer Ledger modal showing line-by-line running balance and reversal triggers.
+    - Customer Statement modal with date filtering and mathematical reconciliation bar.
+    - Reminder Draft modal with language toggle, copy text, and direct WhatsApp open button.
+    - Integrated as first-class top tab in `frontend/src/app/page.tsx` with BookOpen icon.
+- Test results:
+  - 58 backend tests passing 100% in 18.09s (`backend/tests/test_udhar_api.py` and full suite).
+  - Verified: Credit increases balance; repayment reduces balance.
+  - Verified: Repayment allocation cannot exceed repayment or open charge amount.
+  - Verified: Statement reconciles exactly: `closing = opening + charges - repayments`.
+  - Verified: Missing due dates classified as `NOT_DUE`.
+  - Verified: Repayments are collections against receivables, never sales revenue.
+  - Verified: Idempotency keys prevent duplicate transaction posting on network retry.
+  - Verified: Strict cross-tenant isolation (Tenant B cannot see or mutate Tenant A's customer or ledger).
+- Code hygiene:
+  - `ruff check backend`: All checks passed (0 errors).
+  - `ruff format --check backend`: 74 files already formatted (clean).
+  - `pnpm --dir frontend lint`: Clean (0 errors, 0 warnings).
+  - `pnpm --dir frontend build`: Next.js 16.4.6 static build generated cleanly.
+- Decisions:
+  - Receivables are strictly kept distinct from cash and sales revenue.
+  - Confirmed ledger entries are immutable; mistakes are corrected solely through compensating reversals.
+  - Reminders are strictly generated as draft previews; automated messaging without real integration and verified consent is prevented.
+- Known issues: None.
+- Deferred work: None.
+- Next phase: Phase 6 — Predictive Inventory Intelligence.
