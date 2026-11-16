@@ -189,7 +189,7 @@ def send_message(
         from pydantic_ai.usage import UsageLimits
 
         model = OpenAIChatModel(
-            "gpt-4o-mini", provider=OpenAIProvider(api_key=settings.OPENAI_API_KEY)
+            settings.AI_MODEL, provider=OpenAIProvider(api_key=settings.OPENAI_API_KEY)
         )
         if payload.mode == "general":
             agent = Agent(

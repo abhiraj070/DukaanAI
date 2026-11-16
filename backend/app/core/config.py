@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/dukaanai"
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
-    AI_MODEL: str = "google-gla:gemini-2.5-flash"
+    AI_MODEL: str = "gpt-4o-mini"
     AI_TIMEOUT_SECONDS: int = 30
     AI_MAX_REQUESTS: int = 5
 
