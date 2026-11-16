@@ -161,12 +161,6 @@ export function AnalyticsDashboard() {
         </div>
       </div>
 
-      {error && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
 
       {/* Missing Cost Price Invariant Warning Alert */}
       {kpiData && !kpiData.cost_data_available && (

@@ -16,6 +16,9 @@
 
 ## 2. High-level architecture
 
+### AI Chat permission boundary
+AI Chat uses authenticated user-scoped `chat_conversations` and `chat_messages`; `business_id` is nullable and is only written after a server-side membership lookup. General mode constructs a PydanticAI agent with no registered tools and never calls retrieval. Business Context explicitly resolves an active membership and reuses `create_decision_agent`, which exposes only the existing typed tools and tenant-filtered RAG. Each message records its mode, and generation history is restricted to that mode so a mode switch cannot carry prior business data into General mode. Conversation owner checks precede reads and mutations. Context is bounded to 20 recent messages.
+
 ```mermaid
 flowchart TD
     U[Shop owner / manager] --> FE[Next.js frontend]

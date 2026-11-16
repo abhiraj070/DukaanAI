@@ -63,6 +63,14 @@ The flagship experience is the **AI Decision Lab**: a natural-language interface
 
 ## 4. Scope and capabilities
 
+### 4.11 AI Chat — general conversational assistance
+- Provide a dedicated AI Chat navigation item, separate from the AI Decision Lab.
+- General mode answers general knowledge, writing, coding, productivity and business concept questions. It receives no business context, tools or RAG access.
+- An explicit Business Context mode may invoke the existing PydanticAI Decision Lab agent after server-side membership verification. It uses the existing allowlisted tools and tenant-scoped retrieval.
+- Persist user-owned conversations and ordered messages; keep context bounded to the most recent 20 messages in the active mode.
+- Mode-specific message history prevents business answers from being supplied as hidden General mode context.
+- Provider failures are returned as user-facing service errors. General mode does not claim live web access.
+
 ### 4.1 Business data workspace
 - Configure a business/store, region, currency and timezone.
 - Maintain products, categories, units, selling prices, cost prices, stock, reorder settings and suppliers.
@@ -275,16 +283,17 @@ If data is insufficient, explain what is missing. No arbitrary SQL, shell or fil
 
 1. Onboarding — business name, region, INR, timezone, business type and optional opening data.
 2. Overview — KPIs, trends, alerts, outstanding udhar and recent activity.
-3. AI Decision Lab — multilingual chat, evidence, assumptions and safe actions.
-4. Inventory — products, stock, forecast, cover and reorder recommendations.
-5. Sales & Analytics — sales, profitability, expenses and data coverage.
-6. Udhar Management — customer directory, ledger, credit entry, repayment, aging, statements and reminder drafts.
-7. Simulations — scenario builder and baseline-vs-scenario comparison.
-8. Profit Optimization — product profitability and procurement allocation.
-9. Festival Planner — calendar, historical uplift and planning.
-10. Data Centre — text/file ingestion, review queue, document history and errors.
-11. Purchase Orders — drafts, approvals, line items and exports.
-12. Settings — business profile, suppliers, credit defaults, team access and data controls.
+3. AI Chat — general conversational assistance with an explicit optional Business Context mode.
+4. AI Decision Lab — multilingual, evidence-backed business analysis, assumptions and safe actions.
+5. Inventory — products, stock, forecast, cover and reorder recommendations.
+6. Sales & Analytics — sales, profitability, expenses and data coverage.
+7. Udhar Management — customer directory, ledger, credit entry, repayment, aging, statements and reminder drafts.
+8. Simulations — scenario builder and baseline-vs-scenario comparison.
+9. Profit Optimization — product profitability and procurement allocation.
+10. Festival Planner — calendar, historical uplift and planning.
+11. Data Centre — text/file ingestion, review queue, document history and errors.
+12. Purchase Orders — drafts, approvals, line items and exports.
+13. Settings — business profile, suppliers, credit defaults, team access and data controls.
 
 ## 6. Functional requirements and acceptance criteria
 

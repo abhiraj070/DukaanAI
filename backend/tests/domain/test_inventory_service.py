@@ -11,6 +11,7 @@ from app.domain.inventory.service import InventoryService
 from app.models.catalogue import Product, SupplierProduct
 from app.models.inventory import ForecastRun, MovementType
 from app.models.operations import Sale, SaleItem
+from app.models.purchase_order import PurchaseOrder, PurchaseOrderItem
 from app.repositories.inventory import InventoryRepository
 
 
@@ -133,6 +134,46 @@ def test_inventory_forecast_zero_demand_and_zero_stock(db_session: Session, tena
     assert result.is_reorder_recommended is True
     assert result.suggested_order_qty == Decimal("10.000")  # covers safety stock
     assert result.estimated_cost == Decimal("700.00")  # 10 * 70
+
+
+def test_forecast_counts_only_remaining_approved_purchase_order_quantity(
+    db_session: Session, tenants: dict
+):
+    ctx = tenants["tenant_a"]["context"]
+    product = Product(
+        business_id=ctx.business_id,
+        name="Inbound Stock Item",
+        selling_price=Decimal("100.00"),
+        cost_price=Decimal("70.00"),
+        min_stock_level=Decimal("10.000"),
+    )
+    db_session.add(product)
+    db_session.flush()
+    po = PurchaseOrder(
+        business_id=ctx.business_id,
+        status="PARTIALLY_RECEIVED",
+        idempotency_key="forecast-inbound-test",
+    )
+    db_session.add(po)
+    db_session.flush()
+    db_session.add(
+        PurchaseOrderItem(
+            business_id=ctx.business_id,
+            purchase_order_id=po.id,
+            product_id=product.id,
+            product_name=product.name,
+            quantity=Decimal("12.000"),
+            received_quantity=Decimal("4.000"),
+            unit_cost=Decimal("70.00"),
+            unit_cost_source="TEST",
+        )
+    )
+    db_session.commit()
+
+    result = InventoryService(db_session, ctx).forecast_demand(product.id).data
+    assert result.incoming_stock == Decimal("8.000")
+    assert result.is_reorder_recommended is True  # zero demand uses min-stock ROP 10
+    assert result.suggested_order_qty == Decimal("2.000")
 
 
 def test_inventory_forecast_sparse_and_rolling_methods(db_session: Session, tenants: dict):

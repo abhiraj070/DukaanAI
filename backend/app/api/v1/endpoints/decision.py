@@ -60,9 +60,9 @@ def ask_decision_lab(
     if not settings.GEMINI_API_KEY:
         raise ServiceUnavailableError("AI provider is not configured")
     try:
-        from pydantic_ai.usage import UsageLimits
         from pydantic_ai.models.google import GoogleModel
         from pydantic_ai.providers.google import GoogleProvider
+        from pydantic_ai.usage import UsageLimits
 
         model = GoogleModel(
             "gemini-2.5-flash", provider=GoogleProvider(api_key=settings.GEMINI_API_KEY)
