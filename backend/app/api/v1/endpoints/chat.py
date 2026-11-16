@@ -182,14 +182,14 @@ def send_message(
     prompt = "\n".join(f"{m.role}: {m.content}" for m in history) + f"\nuser: {payload.content}"
     settings = get_settings()
     try:
-        if not settings.GEMINI_API_KEY:
+        if not settings.OPENAI_API_KEY:
             raise ServiceUnavailableError("AI provider is not configured")
-        from pydantic_ai.models.google import GoogleModel
-        from pydantic_ai.providers.google import GoogleProvider
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
         from pydantic_ai.usage import UsageLimits
 
-        model = GoogleModel(
-            "gemini-2.5-flash", provider=GoogleProvider(api_key=settings.GEMINI_API_KEY)
+        model = OpenAIChatModel(
+            "gpt-4o-mini", provider=OpenAIProvider(api_key=settings.OPENAI_API_KEY)
         )
         if payload.mode == "general":
             agent = Agent(
